@@ -5,7 +5,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
-import { Employee } from './Dashboard';
+import { Employee } from './types'; 
 
 interface EmployeeFormProps {
   onSubmit: (data: Omit<Employee, 'id'>) => void;

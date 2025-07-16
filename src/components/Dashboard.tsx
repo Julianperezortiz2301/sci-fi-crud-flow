@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Plus, Users, Target, Trash2, Building, Mail, Phone, Calendar, DollarSign, TrendingUp, User, Briefcase } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Plus, Users, Target, Trash2, Building, Mail, Phone, Calendar, DollarSign, TrendingUp, User, Briefcase, Loader2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
@@ -8,91 +8,65 @@ import { useToast } from '@/hooks/use-toast';
 import { EmployeeForm } from './EmployeeForm';
 import { OpportunityForm } from './OpportunityForm';
 
-export interface Employee {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  position: string;
-  department: string;
-  hireDate: string;
-  status: 'active' | 'inactive';
-}
+// Ahora el frontend asume la estructura de los datos directamente del backend.
+// Las interfaces ya no son necesarias aquí, pero si usas TypeScript y quieres mantener un tipado estricto,
+// puedes mover estas interfaces a un archivo separado, como 'types.ts', para ser importado por ambos componentes.
+// Sin embargo, para este ejemplo, las hemos eliminado para simplificar el código.
 
-export interface Opportunity {
-  id: string;
-  title: string;
-  client: string;
-  value: number;
-  status: 'lead' | 'negotiation' | 'closed-won' | 'closed-lost';
-  priority: 'low' | 'medium' | 'high';
-  deadline: string;
-  description: string;
-}
+const API_BASE_URL = 'http://localhost:3000/api';
 
 export function Dashboard() {
-  const [employees, setEmployees] = useState<Employee[]>([
-    {
-      id: '1',
-      name: 'Alexandra Chen',
-      email: 'alex@company.com',
-      phone: '+1 (555) 123-4567',
-      position: 'Senior Developer',
-      department: 'Technology',
-      hireDate: '2024-01-15',
-      status: 'active'
-    },
-    {
-      id: '2',
-      name: 'Marcus Rodriguez',
-      email: 'marcus@company.com',
-      phone: '+1 (555) 234-5678',
-      position: 'Sales Manager',
-      department: 'Sales',
-      hireDate: '2024-01-16',
-      status: 'active'
-    }
-  ]);
-
-  const [opportunities, setOpportunities] = useState<Opportunity[]>([
-    {
-      id: '1',
-      title: 'Enterprise Software Implementation',
-      client: 'Tech Corp Inc.',
-      value: 150000,
-      status: 'negotiation',
-      priority: 'high',
-      deadline: '2024-03-15',
-      description: 'Complete ERP system implementation for large enterprise'
-    },
-    {
-      id: '2',
-      title: 'Website Redesign Project',
-      client: 'Design Studio LLC',
-      value: 45000,
-      status: 'lead',
-      priority: 'medium',
-      deadline: '2024-02-28',
-      description: 'Modern responsive website redesign with CMS integration'
-    }
-  ]);
-  
+  const [employees, setEmployees] = useState([]);
+  const [opportunities, setOpportunities] = useState([]);
   const [showEmployeeForm, setShowEmployeeForm] = useState(false);
   const [showOpportunityForm, setShowOpportunityForm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const handleCreateEmployee = async (data: Omit<Employee, 'id'>) => {
+  const fetchAllData = async () => {
     setIsLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const newEmployee: Employee = {
-        ...data,
-        id: Date.now().toString(),
-      };
-      
-      setEmployees(prev => [...prev, newEmployee]);
+      const employeesResponse = await fetch(`${API_BASE_URL}/employees`);
+      if (!employeesResponse.ok) throw new Error('Failed to fetch employees');
+      const employeesData = await employeesResponse.json();
+      setEmployees(employeesData);
+
+      const opportunitiesResponse = await fetch(`${API_BASE_URL}/opportunities`);
+      if (!opportunitiesResponse.ok) throw new Error('Failed to fetch opportunities');
+      const opportunitiesData = await opportunitiesResponse.json();
+      setOpportunities(opportunitiesData);
+    } catch (error) {
+      console.error("Failed to fetch data:", error);
+      toast({
+        title: "Error de conexión",
+        description: "No se pudieron cargar los datos desde el servidor. Asegúrate de que el backend esté funcionando.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchAllData();
+  }, []);
+
+  const handleCreateEmployee = async (data) => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/employees`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+
+      await fetchAllData();
       setShowEmployeeForm(false);
       
       toast({
@@ -100,6 +74,7 @@ export function Dashboard() {
         description: "El empleado se ha agregado exitosamente.",
       });
     } catch (error) {
+      console.error("Failed to create employee:", error);
       toast({
         title: "Error",
         description: "Hubo un problema al crear el empleado.",
@@ -110,17 +85,22 @@ export function Dashboard() {
     }
   };
 
-  const handleCreateOpportunity = async (data: Omit<Opportunity, 'id'>) => {
+  const handleCreateOpportunity = async (data) => {
     setIsLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const response = await fetch(`${API_BASE_URL}/opportunities`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
       
-      const newOpportunity: Opportunity = {
-        ...data,
-        id: Date.now().toString(),
-      };
-      
-      setOpportunities(prev => [...prev, newOpportunity]);
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+
+      await fetchAllData();
       setShowOpportunityForm(false);
       
       toast({
@@ -128,6 +108,7 @@ export function Dashboard() {
         description: "La oportunidad se ha agregado exitosamente.",
       });
     } catch (error) {
+      console.error("Failed to create opportunity:", error);
       toast({
         title: "Error",
         description: "Hubo un problema al crear la oportunidad.",
@@ -138,18 +119,25 @@ export function Dashboard() {
     }
   };
 
-  const handleDeleteEmployee = async (id: string) => {
+  const handleDeleteEmployee = async (id) => {
     setIsLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 800));
+      const response = await fetch(`${API_BASE_URL}/employees/${id}`, {
+        method: 'DELETE',
+      });
       
-      setEmployees(prev => prev.filter(emp => emp.id !== id));
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+
+      await fetchAllData();
       
       toast({
         title: "Empleado eliminado",
         description: "El empleado se ha eliminado exitosamente.",
       });
     } catch (error) {
+      console.error("Failed to delete employee:", error);
       toast({
         title: "Error",
         description: "Hubo un problema al eliminar el empleado.",
@@ -160,18 +148,25 @@ export function Dashboard() {
     }
   };
 
-  const handleDeleteOpportunity = async (id: string) => {
+  const handleDeleteOpportunity = async (id) => {
     setIsLoading(true);
     try {
-      await new Promise(resolve => setTimeout(resolve, 800));
-      
-      setOpportunities(prev => prev.filter(opp => opp.id !== id));
-      
+      const response = await fetch(`${API_BASE_URL}/opportunities/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+
+      await fetchAllData();
+
       toast({
         title: "Oportunidad eliminada",
         description: "La oportunidad se ha eliminado exitosamente.",
       });
     } catch (error) {
+      console.error("Failed to delete opportunity:", error);
       toast({
         title: "Error",
         description: "Hubo un problema al eliminar la oportunidad.",
@@ -182,7 +177,7 @@ export function Dashboard() {
     }
   };
 
-  const getStatusBadge = (status: string, type: 'employee' | 'opportunity') => {
+  const getStatusBadge = (status, type) => {
     if (type === 'employee') {
       return status === 'active' ? (
         <Badge className="bg-primary/20 text-primary border-primary/30">
@@ -202,7 +197,7 @@ export function Dashboard() {
       };
       
       return (
-        <Badge className={variants[status as keyof typeof variants]}>
+        <Badge className={variants[status]}>
           {status === 'closed-won' ? 'Ganada' : 
            status === 'closed-lost' ? 'Perdida' : 
            status === 'lead' ? 'Lead' : 'Negociación'}
@@ -211,7 +206,7 @@ export function Dashboard() {
     }
   };
 
-  const getPriorityBadge = (priority: string) => {
+  const getPriorityBadge = (priority) => {
     const variants = {
       low: 'bg-green-500/20 text-green-400 border-green-500/30',
       medium: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30',
@@ -219,7 +214,7 @@ export function Dashboard() {
     };
     
     return (
-      <Badge className={variants[priority as keyof typeof variants]}>
+      <Badge className={variants[priority]}>
         {priority === 'low' ? 'Baja' : priority === 'medium' ? 'Media' : 'Alta'}
       </Badge>
     );
@@ -240,7 +235,7 @@ export function Dashboard() {
             </div>
             <div>
               <h1 className="text-5xl font-bold text-foreground mb-2">
-                CRM Futurista
+                compañia de gestión de oportunidades y empleados
               </h1>
               <p className="text-xl text-muted-foreground">
                 Gestión inteligente de empleados y oportunidades
@@ -338,53 +333,63 @@ export function Dashboard() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {employees.map((employee) => (
-                    <div
-                      key={employee.id}
-                      className="flex items-center justify-between p-4 border border-border rounded-lg table-row-hover"
-                    >
-                      <div className="flex items-center space-x-4">
-                        <div className="w-12 h-12 bg-gradient-primary rounded-full flex items-center justify-center">
-                          <User className="w-6 h-6 text-primary-foreground" />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-foreground">{employee.name}</h3>
-                          <p className="text-sm text-muted-foreground flex items-center">
-                            <Mail className="w-3 h-3 mr-1" />
-                            {employee.email}
-                          </p>
-                          <p className="text-sm text-muted-foreground flex items-center">
-                            <Phone className="w-3 h-3 mr-1" />
-                            {employee.phone}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-4">
-                        <div className="text-right">
-                          <p className="font-medium text-foreground">{employee.position}</p>
-                          <p className="text-sm text-muted-foreground">{employee.department}</p>
-                          <p className="text-xs text-muted-foreground flex items-center">
-                            <Calendar className="w-3 h-3 mr-1" />
-                            {new Date(employee.hireDate).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          {getStatusBadge(employee.status, 'employee')}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteEmployee(employee.id)}
-                            disabled={isLoading}
-                            className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive glow-button"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
+                {isLoading ? (
+                    <div className="flex items-center justify-center p-8">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
                     </div>
-                  ))}
-                </div>
+                ) : (
+                    <div className="space-y-4">
+                        {employees.length > 0 ? (
+                            employees.map((employee) => (
+                                <div
+                                  key={employee.id}
+                                  className="flex items-center justify-between p-4 border border-border rounded-lg table-row-hover"
+                                >
+                                  <div className="flex items-center space-x-4">
+                                    <div className="w-12 h-12 bg-gradient-primary rounded-full flex items-center justify-center">
+                                      <User className="w-6 h-6 text-primary-foreground" />
+                                    </div>
+                                    <div>
+                                      <h3 className="font-semibold text-foreground">{employee.name}</h3>
+                                      <p className="text-sm text-muted-foreground flex items-center">
+                                        <Mail className="w-3 h-3 mr-1" />
+                                        {employee.email}
+                                      </p>
+                                      <p className="text-sm text-muted-foreground flex items-center">
+                                        <Phone className="w-3 h-3 mr-1" />
+                                        {employee.phone}
+                                      </p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center space-x-4">
+                                    <div className="text-right">
+                                      <p className="font-medium text-foreground">{employee.position}</p>
+                                      <p className="text-sm text-muted-foreground">{employee.department}</p>
+                                      <p className="text-xs text-muted-foreground flex items-center">
+                                        <Calendar className="w-3 h-3 mr-1" />
+                                        {new Date(employee.hireDate).toLocaleDateString()}
+                                      </p>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                      {getStatusBadge(employee.status, 'employee')}
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleDeleteEmployee(employee.id)}
+                                        disabled={isLoading}
+                                        className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive glow-button"
+                                      >
+                                        <Trash2 className="w-4 h-4" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </div>
+                            ))
+                        ) : (
+                            <p className="text-center text-muted-foreground p-8">No hay empleados registrados.</p>
+                        )}
+                    </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -411,52 +416,62 @@ export function Dashboard() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {opportunities.map((opportunity) => (
-                    <div
-                      key={opportunity.id}
-                      className="flex items-center justify-between p-4 border border-border rounded-lg table-row-hover"
-                    >
-                      <div className="flex items-center space-x-4">
-                        <div className="w-12 h-12 bg-gradient-primary rounded-full flex items-center justify-center">
-                          <Target className="w-6 h-6 text-primary-foreground" />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-foreground">{opportunity.title}</h3>
-                          <p className="text-sm text-muted-foreground flex items-center">
-                            <Building className="w-3 h-3 mr-1" />
-                            {opportunity.client}
-                          </p>
-                          <p className="text-sm text-muted-foreground">{opportunity.description}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-4">
-                        <div className="text-right">
-                          <p className="font-bold text-foreground text-lg">
-                            ${opportunity.value.toLocaleString()}
-                          </p>
-                          <p className="text-sm text-muted-foreground flex items-center">
-                            <Calendar className="w-3 h-3 mr-1" />
-                            {new Date(opportunity.deadline).toLocaleDateString()}
-                          </p>
-                        </div>
-                        <div className="flex flex-col items-end space-y-2">
-                          {getStatusBadge(opportunity.status, 'opportunity')}
-                          {getPriorityBadge(opportunity.priority)}
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteOpportunity(opportunity.id)}
-                          disabled={isLoading}
-                          className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive glow-button"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
+                {isLoading ? (
+                    <div className="flex items-center justify-center p-8">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
                     </div>
-                  ))}
-                </div>
+                ) : (
+                    <div className="space-y-4">
+                        {opportunities.length > 0 ? (
+                            opportunities.map((opportunity) => (
+                                <div
+                                  key={opportunity.id}
+                                  className="flex items-center justify-between p-4 border border-border rounded-lg table-row-hover"
+                                >
+                                  <div className="flex items-center space-x-4">
+                                    <div className="w-12 h-12 bg-gradient-primary rounded-full flex items-center justify-center">
+                                      <Target className="w-6 h-6 text-primary-foreground" />
+                                    </div>
+                                    <div>
+                                      <h3 className="font-semibold text-foreground">{opportunity.title}</h3>
+                                      <p className="text-sm text-muted-foreground flex items-center">
+                                        <Building className="w-3 h-3 mr-1" />
+                                        {opportunity.client}
+                                      </p>
+                                      <p className="text-sm text-muted-foreground">{opportunity.description}</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center space-x-4">
+                                    <div className="text-right">
+                                      <p className="font-bold text-foreground text-lg">
+                                        ${opportunity.value.toLocaleString()}
+                                      </p>
+                                      <p className="text-sm text-muted-foreground flex items-center">
+                                        <Calendar className="w-3 h-3 mr-1" />
+                                        {new Date(opportunity.deadline).toLocaleDateString()}
+                                      </p>
+                                    </div>
+                                    <div className="flex flex-col items-end space-y-2">
+                                      {getStatusBadge(opportunity.status, 'opportunity')}
+                                      {getPriorityBadge(opportunity.priority)}
+                                    </div>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleDeleteOpportunity(opportunity.id)}
+                                      disabled={isLoading}
+                                      className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive glow-button"
+                                    >
+                                      <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  </div>
+                                </div>
+                            ))
+                        ) : (
+                            <p className="text-center text-muted-foreground p-8">No hay oportunidades registradas.</p>
+                        )}
+                    </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

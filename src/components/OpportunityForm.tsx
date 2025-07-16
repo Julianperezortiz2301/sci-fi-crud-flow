@@ -6,7 +6,7 @@ import { Label } from './ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Textarea } from './ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
-import { Opportunity } from './Dashboard';
+import { Opportunity } from './types';
 
 interface OpportunityFormProps {
   onSubmit: (data: Omit<Opportunity, 'id'>) => void;
